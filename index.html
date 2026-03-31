@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RedWord Fixer — 小红书文案敏感词处理</title>
+  <title>RedBook Fixer — 小红书文案敏感词处理</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Noto+Sans+SC:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -73,6 +73,12 @@
       align-items: center;
       justify-content: center;
       letter-spacing: 0.5px;
+      flex-shrink: 0;
+    }
+    .nav-logo {
+      width: 32px;
+      height: 32px;
+      object-fit: contain;
       flex-shrink: 0;
     }
     .nav-title {
@@ -499,8 +505,8 @@
   <!-- Navigation -->
   <nav class="nav">
     <a class="nav-brand" href="#">
-      <div class="nav-seal">红</div>
-      <span class="nav-title">RedWord Fixer</span>
+      <img src="logo.png" class="nav-logo" alt="RedBook Fixer" />
+      <span class="nav-title">RedBook Fixer</span>
     </a>
     <div class="nav-tabs">
       <button class="nav-tab active" data-page="process">文案处理</button>
