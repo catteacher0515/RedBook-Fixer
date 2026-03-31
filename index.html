@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RedWord Fixer — 小红书文案敏感词处理</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Noto+Sans+SC:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ── CSS Variables ── */
+    :root {
+      --bg:          #F5F0E8;
+      --surface:     #FDFAF4;
+      --border:      #E2D9C8;
+      --text:        #1A1612;
+      --text-muted:  #7A6F62;
+      --accent:      #2B2B2B;
+      --gold:        #C8A96E;
+      --red:         #D94F3D;
+      --red-bg:      #FAE8E6;
+      --green:       #3A7D5C;
+      --green-bg:    #E6F2EC;
+      --shadow:      rgba(26,22,18,0.08);
+      --radius:      4px;
+      --transition:  200ms cubic-bezier(0.4,0,0.2,1);
+    }
+
+    /* ── Reset ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 15px; }
+    body {
+      font-family: 'Noto Sans SC', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    button { cursor: pointer; font-family: inherit; }
+    textarea { font-family: inherit; resize: none; }
+    input { font-family: inherit; }
+
+    /* ── Nav ── */
+    .nav {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 32px;
+      height: 56px;
+      gap: 40px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--text);
+    }
+    .nav-seal {
+      width: 32px;
+      height: 32px;
+      background: var(--red);
+      color: #fff;
+      font-family: 'Noto Serif SC', serif;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      letter-spacing: 0.5px;
+      flex-shrink: 0;
+    }
+    .nav-title {
+      font-family: 'Noto Serif SC', serif;
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    .nav-tabs {
+      display: flex;
+      gap: 0;
+      margin-left: 8px;
+    }
+    .nav-tab {
+      background: none;
+      border: none;
+      padding: 0 4px;
+      height: 56px;
+      font-size: 14px;
+      color: var(--text-muted);
+      position: relative;
+      transition: color var(--transition);
+      margin-right: 28px;
+    }
+    .nav-tab::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--text);
+      transform: scaleX(0);
+      transition: transform var(--transition);
+    }
+    .nav-tab.active {
+      color: var(--text);
+      font-weight: 500;
+    }
+    .nav-tab.active::after { transform: scaleX(1); }
+    .nav-tab:hover { color: var(--text); }
+
+    /* ── Pages ── */
+    .page { display: none; flex: 1; }
+    .page.active { display: flex; flex-direction: column; flex: 1; }
+
+    /* ── Main layout ── */
+    main { flex: 1; display: flex; flex-direction: column; }
+
+    /* ── Process Page Layout ── */
+    .process-layout {
+      display: flex;
+      flex: 1;
+      height: calc(100vh - 56px);
+    }
+    .panel {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-width: 0;
+    }
+    .panel-divider {
+      width: 1px;
+      background: var(--border);
+      flex-shrink: 0;
+    }
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 24px 12px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .panel-label {
+      font-family: 'Noto Serif SC', serif;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .word-count {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .panel-body {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+    #input-textarea, .highlight-view {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      padding: 20px 24px;
+      font-size: 15px;
+      line-height: 1.8;
+      color: var(--text);
+      background: var(--bg);
+      border: none;
+      outline: none;
+      overflow-y: auto;
+    }
+    #input-textarea::placeholder { color: var(--text-muted); opacity: 0.6; }
+    .highlight-view {
+      white-space: pre-wrap;
+      word-break: break-all;
+      cursor: default;
+    }
+    .output-placeholder {
+      color: var(--text-muted);
+      font-style: italic;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+    .panel-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 24px;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      gap: 12px;
+    }
+    .footer-left { display: flex; gap: 8px; align-items: center; }
+    .detect-info {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .detect-info .count-red { color: var(--red); font-weight: 500; }
+    .copy-hint {
+      font-size: 12px;
+      color: var(--text-muted);
+      opacity: 0.7;
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      border: none;
+      border-radius: var(--radius);
+      padding: 7px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      transition: background var(--transition), color var(--transition), opacity var(--transition);
+      white-space: nowrap;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { background: #444; }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { color: var(--text); border-color: var(--text-muted); }
+
+    /* ── Highlighted words ── */
+    .word-red {
+      color: var(--red);
+      background: var(--red-bg);
+      border-radius: 2px;
+      padding: 0 2px;
+      cursor: pointer;
+      transition: background var(--transition);
+      animation: underline-in 150ms ease forwards;
+    }
+    .word-red:hover { background: #f5cdc9; }
+    .word-green {
+      color: var(--green);
+      background: var(--green-bg);
+      border-radius: 2px;
+      padding: 0 2px;
+      animation: fade-in 200ms ease forwards;
+    }
+    @keyframes underline-in {
+      from { background: transparent; }
+      to   { background: var(--red-bg); }
+    }
+    @keyframes fade-in {
+      from { opacity: 0; transform: scale(0.97); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    /* ── Drawer ── */
+    .drawer-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(26,22,18,0.25);
+      z-index: 200;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 250ms ease;
+    }
+    .drawer-overlay.open { opacity: 1; pointer-events: all; }
+    .drawer {
+      position: fixed;
+      top: 56px;
+      right: 0;
+      bottom: 0;
+      width: 340px;
+      background: var(--surface);
+      border-left: 3px solid var(--gold);
+      z-index: 201;
+      display: flex;
+      flex-direction: column;
+      padding: 24px;
+      gap: 16px;
+      transform: translateX(100%);
+      transition: transform 300ms cubic-bezier(0.4,0,0.2,1);
+      box-shadow: -4px 0 24px var(--shadow);
+    }
+    .drawer.open { transform: translateX(0); }
+    .drawer-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .drawer-label {
+      font-family: 'Noto Serif SC', serif;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+    .drawer-close {
+      background: none;
+      border: none;
+      font-size: 14px;
+      color: var(--text-muted);
+      padding: 4px;
+      line-height: 1;
+    }
+    .drawer-close:hover { color: var(--text); }
+    .drawer-word {
+      font-family: 'Noto Serif SC', serif;
+      font-size: 28px;
+      font-weight: 600;
+      color: var(--red);
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .drawer-section-label {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .drawer-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .chip {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 5px 12px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: border-color var(--transition), background var(--transition);
+    }
+    .chip:hover, .chip.selected {
+      border-color: var(--gold);
+      background: #fdf6e8;
+    }
+    .drawer-input {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 8px 12px;
+      font-size: 14px;
+      background: var(--bg);
+      color: var(--text);
+      outline: none;
+      transition: border-color var(--transition);
+    }
+    .drawer-input:focus { border-color: var(--gold); }
+    .drawer-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: auto;
+    }
+    .drawer-actions .btn { flex: 1; padding: 10px; text-align: center; }
+
+    /* ── Library Page ── */
+    .library-layout {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      padding: 28px 40px;
+      gap: 24px;
+      max-width: 960px;
+      width: 100%;
+      margin: 0 auto;
+    }
+    .library-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .library-toolbar-right { display: flex; gap: 8px; }
+    .library-add-form {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+    }
+    .form-row {
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+    }
+    .form-field { display: flex; flex-direction: column; gap: 6px; }
+    .form-field-wide { flex: 1; }
+    .form-label {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .form-input {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 7px 12px;
+      font-size: 14px;
+      background: var(--bg);
+      color: var(--text);
+      outline: none;
+      min-width: 140px;
+      transition: border-color var(--transition);
+    }
+    .form-input:focus { border-color: var(--gold); }
+    .library-sections { display: flex; flex-direction: column; gap: 28px; }
+    .library-section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+    .library-section-title {
+      font-family: 'Noto Serif SC', serif;
+      font-size: 15px;
+      font-weight: 600;
+    }
+    .library-section-count {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .library-section-badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+    }
+    .word-table { display: flex; flex-direction: column; gap: 1px; }
+    .word-table-empty {
+      font-size: 13px;
+      color: var(--text-muted);
+      padding: 16px 0;
+      font-style: italic;
+    }
+    .word-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 10px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      transition: background var(--transition);
+    }
+    .word-row:hover { background: #faf6ee; }
+    .word-row-term {
+      font-weight: 500;
+      color: var(--red);
+      min-width: 80px;
+      font-size: 14px;
+    }
+    .word-row-replacements {
+      flex: 1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .word-row-chip {
+      background: var(--green-bg);
+      color: var(--green);
+      border-radius: 2px;
+      padding: 2px 8px;
+      font-size: 12px;
+    }
+    .word-row-actions { display: flex; gap: 6px; margin-left: auto; }
+    .btn-icon {
+      background: none;
+      border: none;
+      font-size: 12px;
+      color: var(--text-muted);
+      padding: 4px 8px;
+      border-radius: var(--radius);
+      transition: color var(--transition), background var(--transition);
+    }
+    .btn-icon:hover { color: var(--text); background: var(--border); }
+    .btn-icon.danger:hover { color: var(--red); background: var(--red-bg); }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <a class="nav-brand" href="#">
+      <div class="nav-seal">红</div>
+      <span class="nav-title">RedWord Fixer</span>
+    </a>
+    <div class="nav-tabs">
+      <button class="nav-tab active" data-page="process">文案处理</button>
+      <button class="nav-tab" data-page="library">词库管理</button>
+    </div>
+  </nav>
+
+  <main>
+    <!-- Page: 文案处理 -->
+    <div class="page active" id="page-process">
+      <div class="process-layout">
+        <!-- Left: 原文 -->
+        <div class="panel panel-left">
+          <div class="panel-header">
+            <span class="panel-label">原文</span>
+            <span class="word-count" id="input-count">0 字</span>
+          </div>
+          <div class="panel-body">
+            <textarea id="input-textarea" placeholder="粘贴小红书文案到这里…"></textarea>
+            <div id="input-highlight" class="highlight-view" style="display:none"></div>
+          </div>
+          <div class="panel-footer">
+            <div class="footer-left">
+              <button class="btn btn-primary" id="btn-detect">开始检测</button>
+              <button class="btn btn-ghost" id="btn-edit" style="display:none">编辑原文</button>
+              <button class="btn btn-ghost" id="btn-clear">清空</button>
+            </div>
+            <div class="detect-info" id="detect-info"></div>
+          </div>
+        </div>
+
+        <!-- Divider -->
+        <div class="panel-divider"></div>
+
+        <!-- Right: 处理结果 -->
+        <div class="panel panel-right">
+          <div class="panel-header">
+            <span class="panel-label">处理结果</span>
+            <span class="word-count" id="output-count">0 字</span>
+          </div>
+          <div class="panel-body">
+            <div id="output-view" class="highlight-view output-placeholder">检测后自动生成替换版本</div>
+          </div>
+          <div class="panel-footer">
+            <div class="footer-left">
+              <button class="btn btn-primary" id="btn-copy" disabled>复制结果</button>
+            </div>
+            <div class="copy-hint">复制后建议去零克查词做最终检测</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Page: 词库管理 -->
+    <div class="page" id="page-library">
+      <div class="library-layout">
+        <!-- 顶部操作栏 -->
+        <div class="library-toolbar">
+          <div class="library-toolbar-left">
+            <span class="panel-label">词库管理</span>
+          </div>
+          <div class="library-toolbar-right">
+            <button class="btn btn-ghost" id="btn-export">导出自定义词库</button>
+            <label class="btn btn-ghost" id="btn-import-label">
+              导入词库
+              <input type="file" id="btn-import" accept=".json" style="display:none" />
+            </label>
+          </div>
+        </div>
+
+        <!-- 添加词条表单 -->
+        <div class="library-add-form">
+          <div class="form-row">
+            <div class="form-field">
+              <label class="form-label">敏感词</label>
+              <input class="form-input" id="add-word" type="text" placeholder="输入敏感词" />
+            </div>
+            <div class="form-field form-field-wide">
+              <label class="form-label">建议替换词（逗号分隔）</label>
+              <input class="form-input" id="add-replacements" type="text" placeholder="替换词1, 替换词2, …" />
+            </div>
+            <button class="btn btn-primary" id="btn-add-word">添加</button>
+          </div>
+        </div>
+
+        <!-- 词库列表区 -->
+        <div class="library-sections">
+          <!-- 用户自定义词库 -->
+          <div class="library-section">
+            <div class="library-section-header">
+              <span class="library-section-title">自定义词库</span>
+              <span class="library-section-count" id="custom-count">0 条</span>
+            </div>
+            <div class="word-table" id="custom-word-table">
+              <div class="word-table-empty">暂无自定义词条</div>
+            </div>
+          </div>
+
+          <!-- 内置词库 -->
+          <div class="library-section">
+            <div class="library-section-header">
+              <span class="library-section-title">内置词库</span>
+              <span class="library-section-count" id="builtin-count">0 条</span>
+              <span class="library-section-badge">只读</span>
+            </div>
+            <div class="word-table" id="builtin-word-table">
+              <div class="word-table-empty">加载中…</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 替换面板 Drawer -->
+    <div class="drawer-overlay" id="drawer-overlay"></div>
+    <div class="drawer" id="drawer">
+      <div class="drawer-header">
+        <span class="drawer-label">替换敏感词</span>
+        <button class="drawer-close" id="drawer-close">✕</button>
+      </div>
+      <div class="drawer-word" id="drawer-word"></div>
+      <div class="drawer-section-label">建议替换词</div>
+      <div class="drawer-chips" id="drawer-chips"></div>
+      <div class="drawer-section-label">自定义替换</div>
+      <input class="drawer-input" id="drawer-input" type="text" placeholder="输入替换词…" />
+      <div class="drawer-actions">
+        <button class="btn btn-ghost" id="drawer-cancel">取消</button>
+        <button class="btn btn-primary" id="drawer-confirm">确认替换</button>
+      </div>
+    </div>
+  </main>
+
+
+<script>
+// ── State ──
+let builtinWords = {};
+let customWords = {};
+let detectedSegments = []; // [{text, isSensitive, word, replacement}]
+let activeWordIndex = -1;
+
+// ── Init ──
+async function init() {
+  await loadBuiltinWords();
+  loadCustomWords();
+  renderLibraryPage();
+  bindNav();
+  bindProcessPage();
+  bindDrawer();
+  bindLibraryPage();
+}
+
+async function loadBuiltinWords() {
+  try {
+    const res = await fetch('words.json');
+    builtinWords = await res.json();
+  } catch(e) {
+    builtinWords = {};
+    console.warn('words.json 加载失败', e);
+  }
+}
+
+function loadCustomWords() {
+  try {
+    customWords = JSON.parse(localStorage.getItem('rwf_custom') || '{}');
+  } catch(e) {
+    customWords = {};
+  }
+}
+
+function saveCustomWords() {
+  localStorage.setItem('rwf_custom', JSON.stringify(customWords));
+}
+
+function getMergedWords() {
+  return Object.assign({}, builtinWords, customWords);
+}
+
+// ── Detection ──
+function detectSensitiveWords(text) {
+  const dict = getMergedWords();
+  // Sort by word length descending to avoid short-word shadowing
+  const sortedWords = Object.keys(dict).sort((a, b) => b.length - a.length);
+  const lowerText = text.toLowerCase();
+
+  // Build a match map: index → {word, start}
+  const matchMap = new Array(text.length).fill(null);
+  for (const word of sortedWords) {
+    // If the word is pure ASCII letters, match case-sensitively
+    const caseSensitive = /^[a-zA-Z]+$/.test(word) && word !== word.toUpperCase();
+    const searchText = caseSensitive ? text : lowerText;
+    const searchWord = caseSensitive ? word : word.toLowerCase();
+    let pos = 0;
+    while (pos < searchText.length) {
+      const idx = searchText.indexOf(searchWord, pos);
+      if (idx === -1) break;
+      let covered = false;
+      for (let i = idx; i < idx + word.length; i++) {
+        if (matchMap[i]) { covered = true; break; }
+      }
+      if (!covered) {
+        for (let i = idx; i < idx + word.length; i++) {
+          matchMap[i] = { word, start: idx };
+        }
+      }
+      pos = idx + 1;
+    }
+  }
+
+  // Build segments
+  const segments = [];
+  let i = 0;
+  while (i < text.length) {
+    if (matchMap[i] && matchMap[i].start === i) {
+      const word = matchMap[i].word;
+      const replacements = dict[word] || [];
+      segments.push({
+        text: text.slice(i, i + word.length),
+        isSensitive: true,
+        word,
+        replacement: replacements[0] || null,
+        replacements,
+        userReplacement: null
+      });
+      i += word.length;
+    } else if (matchMap[i]) {
+      // mid-word coverage (shouldn't happen with start check, safety)
+      i++;
+    } else {
+      // Normal text — accumulate
+      let j = i;
+      while (j < text.length && !matchMap[j]) j++;
+      segments.push({ text: text.slice(i, j), isSensitive: false });
+      i = j;
+    }
+  }
+  return segments;
+}
+
+// ── Render ──
+function renderHighlight(segments, container, clickable) {
+  container.innerHTML = '';
+  segments.forEach((seg, idx) => {
+    if (!seg.isSensitive) {
+      container.appendChild(document.createTextNode(seg.text));
+      return;
+    }
+    const span = document.createElement('span');
+    const isReplaced = seg.userReplacement !== null;
+    span.className = isReplaced ? 'word-green' : 'word-red';
+    span.textContent = isReplaced ? seg.userReplacement : seg.text;
+    if (clickable) {
+      span.dataset.idx = idx;
+      span.style.animationDelay = (idx * 20) + 'ms';
+    }
+    container.appendChild(span);
+  });
+}
+
+function renderOutput(segments, container) {
+  container.innerHTML = '';
+  container.classList.remove('output-placeholder');
+  segments.forEach(seg => {
+    if (!seg.isSensitive) {
+      container.appendChild(document.createTextNode(seg.text));
+      return;
+    }
+    const span = document.createElement('span');
+    const replacement = seg.userReplacement ?? seg.replacement;
+    if (replacement) {
+      span.className = 'word-green';
+      span.textContent = replacement;
+    } else {
+      span.className = 'word-red';
+      span.textContent = seg.text;
+    }
+    container.appendChild(span);
+  });
+  updateOutputCount(segments);
+}
+
+function getOutputText(segments) {
+  return segments.map(seg => {
+    if (!seg.isSensitive) return seg.text;
+    return seg.userReplacement ?? seg.replacement ?? seg.text;
+  }).join('');
+}
+
+function updateOutputCount(segments) {
+  const text = getOutputText(segments);
+  document.getElementById('output-count').textContent = text.length + ' 字';
+}
+
+// ── Nav ──
+function bindNav() {
+  document.querySelectorAll('.nav-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('page-' + tab.dataset.page).classList.add('active');
+      if (tab.dataset.page === 'library') renderLibraryPage();
+    });
+  });
+}
+
+// ── Process Page ──
+function bindProcessPage() {
+  const textarea = document.getElementById('input-textarea');
+  const inputHighlight = document.getElementById('input-highlight');
+  const outputView = document.getElementById('output-view');
+  const btnDetect = document.getElementById('btn-detect');
+  const btnEdit = document.getElementById('btn-edit');
+  const btnClear = document.getElementById('btn-clear');
+  const btnCopy = document.getElementById('btn-copy');
+  const detectInfo = document.getElementById('detect-info');
+  const inputCount = document.getElementById('input-count');
+
+  function switchToHighlight() {
+    textarea.style.display = 'none';
+    inputHighlight.style.display = 'block';
+    btnDetect.textContent = '重新检测';
+    btnEdit.style.display = '';
+  }
+
+  function switchToEdit() {
+    textarea.style.display = 'block';
+    inputHighlight.style.display = 'none';
+    btnDetect.textContent = '开始检测';
+    btnEdit.style.display = 'none';
+    textarea.focus();
+  }
+
+  textarea.addEventListener('input', () => {
+    inputCount.textContent = textarea.value.length + ' 字';
+  });
+
+  btnDetect.addEventListener('click', () => {
+    const text = textarea.value.trim();
+    if (!text) return;
+
+    detectedSegments = detectSensitiveWords(text);
+    const sensitiveCount = detectedSegments.filter(s => s.isSensitive).length;
+
+    switchToHighlight();
+    renderHighlight(detectedSegments, inputHighlight, true);
+
+    outputView.style.display = 'block';
+    renderOutput(detectedSegments, outputView);
+
+    if (sensitiveCount === 0) {
+      detectInfo.innerHTML = '未检测到敏感词';
+    } else {
+      detectInfo.innerHTML = '检测到 <span class="count-red">' + sensitiveCount + '</span> 个敏感词';
+    }
+    btnCopy.disabled = false;
+  });
+
+  btnEdit.addEventListener('click', () => {
+    switchToEdit();
+    detectInfo.innerHTML = '';
+  });
+
+  btnClear.addEventListener('click', () => {
+    textarea.value = '';
+    switchToEdit();
+    inputHighlight.innerHTML = '';
+    outputView.innerHTML = '检测后自动生成替换版本';
+    outputView.classList.add('output-placeholder');
+    detectInfo.innerHTML = '';
+    inputCount.textContent = '0 字';
+    document.getElementById('output-count').textContent = '0 字';
+    btnCopy.disabled = true;
+    detectedSegments = [];
+  });
+
+  btnCopy.addEventListener('click', () => {
+    const text = getOutputText(detectedSegments);
+    navigator.clipboard.writeText(text).then(() => {
+      btnCopy.textContent = '已复制 ✓';
+      setTimeout(() => { btnCopy.textContent = '复制结果'; }, 2000);
+    });
+  });
+
+  // Click on highlighted word
+  document.getElementById('input-highlight').addEventListener('click', e => {
+    const span = e.target.closest('[data-idx]');
+    if (!span) return;
+    activeWordIndex = parseInt(span.dataset.idx);
+    openDrawer(detectedSegments[activeWordIndex]);
+  });
+
+  // Scroll sync
+  let syncingScroll = false;
+  function syncScroll(source, target) {
+    if (syncingScroll) return;
+    syncingScroll = true;
+    const ratio = source.scrollTop / (source.scrollHeight - source.clientHeight || 1);
+    target.scrollTop = ratio * (target.scrollHeight - target.clientHeight);
+    syncingScroll = false;
+  }
+  textarea.addEventListener('scroll', () => syncScroll(textarea, outputView));
+  inputHighlight.addEventListener('scroll', () => syncScroll(inputHighlight, outputView));
+  outputView.addEventListener('scroll', () => {
+    const active = inputHighlight.style.display === 'none' ? textarea : inputHighlight;
+    syncScroll(outputView, active);
+  });
+}
+
+// ── Drawer ──
+function bindDrawer() {
+  document.getElementById('drawer-close').addEventListener('click', closeDrawer);
+  document.getElementById('drawer-cancel').addEventListener('click', closeDrawer);
+  document.getElementById('drawer-overlay').addEventListener('click', closeDrawer);
+
+  document.getElementById('drawer-confirm').addEventListener('click', () => {
+    const val = document.getElementById('drawer-input').value.trim();
+    if (!val || activeWordIndex === -1) return;
+    detectedSegments[activeWordIndex].userReplacement = val;
+    // Re-render both sides
+    renderHighlight(detectedSegments, document.getElementById('input-highlight'), true);
+    renderOutput(detectedSegments, document.getElementById('output-view'));
+    closeDrawer();
+  });
+}
+
+function openDrawer(seg) {
+  document.getElementById('drawer-word').textContent = seg.text;
+  const chips = document.getElementById('drawer-chips');
+  chips.innerHTML = '';
+  const allReplacements = seg.replacements || [];
+  allReplacements.forEach(r => {
+    const chip = document.createElement('button');
+    chip.className = 'chip';
+    chip.textContent = r;
+    chip.addEventListener('click', () => {
+      document.getElementById('drawer-input').value = r;
+      chips.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+      chip.classList.add('selected');
+    });
+    chips.appendChild(chip);
+  });
+  const input = document.getElementById('drawer-input');
+  input.value = seg.userReplacement || seg.replacement || '';
+  document.getElementById('drawer-overlay').classList.add('open');
+  document.getElementById('drawer').classList.add('open');
+  setTimeout(() => input.focus(), 310);
+}
+
+function closeDrawer() {
+  document.getElementById('drawer-overlay').classList.remove('open');
+  document.getElementById('drawer').classList.remove('open');
+  activeWordIndex = -1;
+}
+
+// ── Library Page ──
+function renderLibraryPage() {
+  renderWordTable('builtin-word-table', builtinWords, false);
+  renderWordTable('custom-word-table', customWords, true);
+  document.getElementById('builtin-count').textContent = Object.keys(builtinWords).length + ' 条';
+  document.getElementById('custom-count').textContent = Object.keys(customWords).length + ' 条';
+}
+
+function renderWordTable(containerId, dict, editable) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  const entries = Object.entries(dict);
+  if (entries.length === 0) {
+    container.innerHTML = '<div class="word-table-empty">' + (editable ? '暂无自定义词条' : '加载中…') + '</div>';
+    return;
+  }
+  entries.forEach(([word, replacements]) => {
+    const row = document.createElement('div');
+    row.className = 'word-row';
+    const chips = (replacements || []).map(r =>
+      '<span class="word-row-chip">' + escapeHtml(r) + '</span>'
+    ).join('');
+    row.innerHTML =
+      '<span class="word-row-term">' + escapeHtml(word) + '</span>' +
+      '<div class="word-row-replacements">' + chips + '</div>' +
+      (editable
+        ? '<div class="word-row-actions">' +
+            '<button class="btn-icon danger" data-word="' + escapeHtml(word) + '">删除</button>' +
+          '</div>'
+        : '');
+    container.appendChild(row);
+  });
+
+  if (editable) {
+    container.querySelectorAll('.btn-icon.danger').forEach(btn => {
+      btn.addEventListener('click', () => {
+        delete customWords[btn.dataset.word];
+        saveCustomWords();
+        renderLibraryPage();
+      });
+    });
+  }
+}
+
+function bindLibraryPage() {
+  document.getElementById('btn-add-word').addEventListener('click', () => {
+    const word = document.getElementById('add-word').value.trim();
+    const raw = document.getElementById('add-replacements').value.trim();
+    if (!word) return;
+    const replacements = raw ? raw.split(/[,，]+/).map(s => s.trim()).filter(Boolean) : [];
+    customWords[word] = replacements;
+    saveCustomWords();
+    document.getElementById('add-word').value = '';
+    document.getElementById('add-replacements').value = '';
+    renderLibraryPage();
+  });
+
+  document.getElementById('btn-export').addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(customWords, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'rwf-custom-words.json';
+    a.click();
+  });
+
+  document.getElementById('btn-import').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const imported = JSON.parse(ev.target.result);
+        customWords = Object.assign({}, customWords, imported);
+        saveCustomWords();
+        renderLibraryPage();
+      } catch(err) {
+        alert('JSON 格式错误，导入失败');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  });
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Start ──
+init();
+</script>
+</body>
+</html>
