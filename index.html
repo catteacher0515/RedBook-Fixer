@@ -498,6 +498,72 @@
     }
     .btn-icon:hover { color: var(--text); background: var(--border); }
     .btn-icon.danger:hover { color: var(--red); background: var(--red-bg); }
+
+    /* ── About Page ── */
+    .about-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+    .about-header {
+      margin-bottom: 32px;
+    }
+    .about-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 48px 40px;
+      max-width: 480px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 20px;
+      box-shadow: 0 2px 8px var(--shadow);
+    }
+    .about-avatar {
+      margin-bottom: 16px;
+    }
+    .avatar-img {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid var(--border);
+    }
+    .about-github-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 24px;
+    }
+    .about-description {
+      margin-top: 16px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      width: 100%;
+    }
+    .about-title {
+      font-family: 'Noto Serif SC', serif;
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text);
+      margin: 0 0 12px 0;
+    }
+    .about-subtitle {
+      font-size: 15px;
+      line-height: 1.8;
+      color: var(--text);
+      margin: 0 0 12px 0;
+    }
+    .about-cta {
+      font-size: 14px;
+      line-height: 1.8;
+      color: var(--text-muted);
+      margin: 0;
+    }
   </style>
 </head>
 <body>
@@ -511,6 +577,7 @@
     <div class="nav-tabs">
       <button class="nav-tab active" data-page="process">文案处理</button>
       <button class="nav-tab" data-page="library">词库管理</button>
+      <button class="nav-tab" data-page="about">关于作者</button>
     </div>
   </nav>
 
@@ -614,6 +681,33 @@
             </div>
             <div class="word-table" id="builtin-word-table">
               <div class="word-table-empty">加载中…</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Page: 关于作者 -->
+    <div class="page" id="page-about">
+      <div class="library-layout">
+        <div class="about-content">
+          <div class="about-header">
+            <span class="panel-label">关于作者</span>
+          </div>
+          <div class="about-card">
+            <div class="about-avatar">
+              <img src="pingyu.png?v=2" alt="作者头像" class="avatar-img" />
+            </div>
+            <a href="https://github.com/catteacher0515" target="_blank" rel="noopener noreferrer" class="btn btn-primary about-github-btn">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style="margin-right: 6px;">
+                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+              </svg>
+              访问 GitHub
+            </a>
+            <div class="about-description">
+              <h2 class="about-title">RedBook Fixer</h2>
+              <p class="about-subtitle">一个帮助小红书创作者处理敏感词的开源工具</p>
+              <p class="about-cta">如果这个工具对你有帮助，欢迎在 GitHub 上给个 Star ⭐</p>
             </div>
           </div>
         </div>
