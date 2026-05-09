@@ -1,3 +1,34 @@
+const TESSERACT_SCRIPT_URL = 'https://cdn.jsdelivr.net/npm/tesseract.js@6/dist/tesseract.min.js';
+
+function loadTesseractGlobal() {
+  if (globalThis.Tesseract?.createWorker) {
+    return Promise.resolve(globalThis.Tesseract);
+  }
+
+  return new Promise((resolve, reject) => {
+    const existing = document.querySelector(`script[data-tesseract-cdn="true"]`);
+    if (existing) {
+      existing.addEventListener('load', () => resolve(globalThis.Tesseract), { once: true });
+      existing.addEventListener('error', () => reject(new Error('Tesseract CDN 加载失败')), { once: true });
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = TESSERACT_SCRIPT_URL;
+    script.async = true;
+    script.dataset.tesseractCdn = 'true';
+    script.onload = () => {
+      if (globalThis.Tesseract?.createWorker) {
+        resolve(globalThis.Tesseract);
+      } else {
+        reject(new Error('Tesseract 全局对象不可用'));
+      }
+    };
+    script.onerror = () => reject(new Error('Tesseract CDN 加载失败'));
+    document.head.appendChild(script);
+  });
+}
+
 export function createImageOcrState() {
   return {
     file: null,
@@ -33,7 +64,7 @@ export function bindImageActions(document, { onSend }) {
 }
 
 export async function recognizeImageText(file) {
-  const { createWorker } = await import('tesseract.js');
+  const { createWorker } = await loadTesseractGlobal();
   const worker = await createWorker('chi_sim+eng');
   try {
     const result = await worker.recognize(file);
