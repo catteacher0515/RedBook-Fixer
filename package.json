@@ -1,0 +1,14 @@
+{
+  "name": "redbook-fixer",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "tesseract.js": "^6.0.1"
+  },
+  "devDependencies": {
+    "jsdom": "^26.1.0"
+  }
+}
