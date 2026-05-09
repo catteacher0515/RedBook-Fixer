@@ -63,12 +63,35 @@ export function bindImageActions(document, { onSend }) {
   });
 }
 
+export function normalizeOcrText(text) {
+  const collapseHanSpacing = (line) => {
+    let current = line.replace(/[ \t]+/g, ' ');
+    let previous;
+    do {
+      previous = current;
+      current = current
+        .replace(/([一-龥])\s+([一-龥])/g, '$1$2')
+        .replace(/([一-龥])\s+([，。！？；：、）】》])/g, '$1$2')
+        .replace(/([（【《])\s+([一-龥])/g, '$1$2');
+    } while (current !== previous);
+    return current.trim();
+  };
+
+  return text
+    .replace(/\r\n/g, '\n')
+    .split('\n')
+    .map(collapseHanSpacing)
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 export async function recognizeImageText(file) {
   const { createWorker } = await loadTesseractGlobal();
   const worker = await createWorker('chi_sim+eng');
   try {
     const result = await worker.recognize(file);
-    return result.data.text || '';
+    return normalizeOcrText(result.data.text || '');
   } finally {
     await worker.terminate();
   }

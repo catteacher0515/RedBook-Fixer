@@ -1,7 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { JSDOM } from 'jsdom';
-import { createImageOcrState, getImageFileError, bindImageActions } from '../src/ocr.js';
+import {
+  createImageOcrState,
+  getImageFileError,
+  bindImageActions,
+  normalizeOcrText
+} from '../src/ocr.js';
 
 test('createImageOcrState resets image OCR state to its empty defaults', () => {
   const state = createImageOcrState();
@@ -47,4 +52,27 @@ test('bindImageActions sends edited OCR text to the process page when send butto
   dom.window.document.getElementById('btn-send-to-process').click();
 
   assert.equal(dom.window.document.getElementById('input-textarea').value, '图片文字');
+});
+
+test('normalizeOcrText removes unnecessary spaces between Chinese characters and punctuation', () => {
+  const raw = `这 个
+GitHub 项 目 ，
+想 把 微 信 数据
+这 成 你 的
+
+本 地 资产
+
+图 rz`;
+
+  assert.equal(
+    normalizeOcrText(raw),
+    `这个
+GitHub 项目，
+想把微信数据
+这成你的
+
+本地资产
+
+图 rz`
+  );
 });
